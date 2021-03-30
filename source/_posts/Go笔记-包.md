@@ -50,4 +50,28 @@ func main() {
 }
 ```
 
-####
+#### 锁和sync
+
+Go中锁是通过`sync`包中的`Mutex`来实现的。
+
+`sync.Mutex`是一个互斥锁，它可以保证在临界区入口同一个时间只能有一个线程进入临界区，线程将有序的对同一变量进行访问。
+
+eg:
+
+```go
+import "sync"
+
+type Info struct {
+  mu sync.Mutex
+  Str string
+}
+
+func Update(info *Info) {
+  info.mu.Lock()
+  info.Str = "new string"
+  info.mu.Unlock()
+}
+```
+
+有时我们允许在同一时间有多个线程对变量进行访问，但是又不允许同时对其修改，我们需要使用`sync`包中的`RWMutex`锁可以通过`Rlock()`来允许同一时间多个线程对变量进行读操作，但是同一时间只能有一个线程进行写操作。
+
