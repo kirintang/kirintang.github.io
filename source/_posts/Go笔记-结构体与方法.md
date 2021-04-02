@@ -8,7 +8,7 @@ Go通过类型别名和结构体来支持用户自定义类型，需要定义一
 
 <!-- more -->
 
-#### 方法
+#### 结构体
 
 ##### 定义
 
@@ -146,4 +146,93 @@ func main() {
 ```
 
 > 组合结构体会出现一个问题，字段命名冲突，此时需要自行修改保证字段名不能一致。
+
+#### 方法
+
+##### 定义
+
+方法的定义一般格式为：
+
+```go
+// recv方法的1接收者
+func (recv receiver_type) methodName(parameter_list) (return_value_list) {
+  ......
+}
+```
+
+如果方法不需要使用`recv`的值，可以省略`_`：`receiver_type`必须和*方法名*在同样的包中声明。
+
+```go
+func (_ receiver_type) methodName(parameter_list) (return_value_list) {
+  ......
+}
+```
+
+`recv`相当于面向对象语言中的`this`或者`self`，`Go`中没有这两个关键字，所以可以写成`this`或者`self`来代替：
+
+```go
+func (this receiver_type) methodName(parameter_list) (return_value_list) {
+  ......
+}
+// 或者
+func (self receiver_type) methodName(parameter_list) (return_value_list) {
+  ......
+}
+```
+
+eg:
+
+```go
+import "fmt"
+
+type TwoInt struct {
+	a, b int
+}
+
+func main() {
+	two1 := new(TwoInt)
+	two1.a = 1
+	two1.b = 2
+
+	fmt.Printf("sum is: %d\n", two1.AddThem()) // 11
+	fmt.Printf("sum of param: %d\n", two1.AddToParam(10)) // 21
+}
+
+func (tn *TwoInt) AddThem() int {
+  tn.b = 10
+	return tn.a + tn.b
+}
+
+func (tn *TwoInt) AddToParam(param int) int {
+	return tn.a + tn.b + param
+}
+```
+
+##### 函数和方法的区别
+
+函数将变量作为参数：`Function1(recv)`
+
+方法在变量上被调用：`recv.Method1()`
+
+##### 内嵌类型的方法和继承
+
+当一个匿名类型被嵌套在结构体中时，匿名类型的可见方法也会被嵌套进去，相当于外层类型继承了这些可见方法：子类型继承父类型的公共方法 (有面向对象内味儿了)。
+
+一个`Engine`的接口类型，一个`Car`的结构类型包含`Engine`类型的匿名字段：
+
+```go
+type Engine interface {
+  Start()
+  Stop()
+}
+
+type Car struct {
+  Engine
+}
+
+func (c *Car) GotoWork() {
+  c.Start()
+  c.Stop()
+}
+```
 
