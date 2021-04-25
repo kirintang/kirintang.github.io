@@ -105,3 +105,50 @@ func main() {
 }
 ```
 
+##### 接口类型判断
+
+接口类型同样可以使用`type-switch`来判断：
+
+```go
+switch areaIntf.(type) {
+  case *Square:
+  	//
+  case *Circle:
+  	//
+  case nil:
+  	//
+	default:
+  	//
+}
+```
+
+eg:
+
+```go
+func classifier(items ...interface{}) {
+  for i, x := range items {
+    switch x.(type) {
+      case bool:
+      fmt.Println("bool")
+    	case float32:
+      fmt.Println("float32")
+      ......
+    }
+  }
+}
+```
+
+##### 测试一个值是否实现了某个接口
+
+假定一个值`v`，判断它是否实现了`Stringer`接口：
+
+```go
+type Stringer interface {
+  String() string
+}
+
+if _, ok := v.(Stringer); ok {
+  // ok
+}
+```
+
