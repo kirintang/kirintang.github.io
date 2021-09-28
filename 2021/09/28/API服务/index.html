@@ -20,17 +20,17 @@
     var CONFIG = {"hostname":"example.com","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":"mac"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
   </script>
 
-  <meta name="description" content="一，初始化首先，我们在Github创建一个仓库，命名为learn-go-by-example，克隆到本地: 12$ git clone https:&#x2F;&#x2F;github.com&#x2F;kirintang&#x2F;learn-go-by-examples.git$ cd learn-go-by-examples 我们在仓库目录下定义我们的api服务目录go-rest-api:    12$ mkdir go-rest">
+  <meta name="description" content="一，初始化首先，我们在Github创建一个仓库，命名为learn-go-by-example，克隆到本地: 12$ git clone https:&#x2F;&#x2F;github.com&#x2F;kirintang&#x2F;learn-go-by-examples.git$ cd learn-go-by-examples 我们在仓库目录下定义我们的api服务目录go-rest-api:">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Go搭建Restful HTTP API服务">
 <meta property="og:url" content="http://example.com/2021/09/28/API%E6%9C%8D%E5%8A%A1/index.html">
 <meta property="og:site_name" content="KirinTang">
-<meta property="og:description" content="一，初始化首先，我们在Github创建一个仓库，命名为learn-go-by-example，克隆到本地: 12$ git clone https:&#x2F;&#x2F;github.com&#x2F;kirintang&#x2F;learn-go-by-examples.git$ cd learn-go-by-examples 我们在仓库目录下定义我们的api服务目录go-rest-api:    12$ mkdir go-rest">
+<meta property="og:description" content="一，初始化首先，我们在Github创建一个仓库，命名为learn-go-by-example，克隆到本地: 12$ git clone https:&#x2F;&#x2F;github.com&#x2F;kirintang&#x2F;learn-go-by-examples.git$ cd learn-go-by-examples 我们在仓库目录下定义我们的api服务目录go-rest-api:">
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://raw.githubusercontent.com/kirintang/imgLib/master/20210928150354.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/kirintang/imgLib/master/20210928150641.png">
 <meta property="article:published_time" content="2021-09-28T09:01:38.000Z">
-<meta property="article:modified_time" content="2021-09-28T09:04:39.071Z">
+<meta property="article:modified_time" content="2021-09-28T09:06:28.324Z">
 <meta property="article:author" content="kirintang">
 <meta property="article:tag" content="go">
 <meta name="twitter:card" content="summary">
@@ -214,7 +214,7 @@
         <h3 id="一，初始化"><a href="#一，初始化" class="headerlink" title="一，初始化"></a>一，初始化</h3><p>首先，我们在<code>Github</code>创建一个仓库，命名为<code>learn-go-by-example</code>，克隆到本地:</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$ git <span class="built_in">clone</span> https://github.com/kirintang/learn-go-by-examples.git</span><br><span class="line">$ <span class="built_in">cd</span> learn-go-by-examples</span><br></pre></td></tr></table></figure>
 <p>我们在仓库目录下定义我们的<code>api</code>服务目录<code>go-rest-api</code>:</p>
-<!--- more ---->
+<span id="more"></span>
 
 
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$ mkdir go-rest-api</span><br><span class="line">$ <span class="built_in">cd</span> go-rest-api</span><br></pre></td></tr></table></figure>
