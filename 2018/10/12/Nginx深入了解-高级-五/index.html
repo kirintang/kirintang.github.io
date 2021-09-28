@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Menlo:300,300italic,400,400italic,700,700italic|monospace:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":"mac"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="使用Nginx与Lua开发。Lua是一个简洁、轻量、可扩展性的脚本语言；充分结合Nginx的并发处理epoll优势和Lua的轻量实现简单的功能且高并发的场景。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Nginx深入了解-高级(五)">
+<meta property="og:url" content="http://example.com/2018/10/12/Nginx%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3-%E9%AB%98%E7%BA%A7-%E4%BA%94/index.html">
+<meta property="og:site_name" content="KirinTang">
+<meta property="og:description" content="使用Nginx与Lua开发。Lua是一个简洁、轻量、可扩展性的脚本语言；充分结合Nginx的并发处理epoll优势和Lua的轻量实现简单的功能且高并发的场景。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2018-10-12T06:08:20.000Z">
+<meta property="article:modified_time" content="2021-03-11T01:40:31.762Z">
+<meta property="article:author" content="kirintang">
+<meta property="article:tag" content="nginx">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://example.com/2018/10/12/Nginx%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3-%E9%AB%98%E7%BA%A7-%E4%BA%94/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Nginx深入了解-高级(五) | KirinTang</title>
+  
+
+
+  <script>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?1845b2e87cd45ab676f07dac5bde9ae3";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">KirinTang</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">Code And Learn</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-commonweal">
+
+    <a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2018/10/12/Nginx%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3-%E9%AB%98%E7%BA%A7-%E4%BA%94/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="https://avatars.githubusercontent.com/u/8286273">
+      <meta itemprop="name" content="kirintang">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="KirinTang">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Nginx深入了解-高级(五)
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2018-10-12 14:08:20" itemprop="dateCreated datePublished" datetime="2018-10-12T14:08:20+08:00">2018-10-12</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>使用Nginx与Lua开发。Lua是一个简洁、轻量、可扩展性的脚本语言；充分结合Nginx的并发处理epoll优势和Lua的轻量实现简单的功能且高并发的场景。</p>
+<span id="more"></span>
+
+<h5 id="Lua安装"><a href="#Lua安装" class="headerlink" title="Lua安装"></a>Lua安装</h5><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">yum install lua</span><br></pre></td></tr></table></figure>
+
+<h5 id="Lua运行"><a href="#Lua运行" class="headerlink" title="Lua运行"></a>Lua运行</h5><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 命令行 </span></span><br><span class="line">Centos-Aliyun$ lua </span><br><span class="line">Lua 5.1.4 Copyright(C) 1994-2018 Lua.org,PUC-Rio </span><br><span class="line">&gt; orint(<span class="string">&quot;hello world&quot;</span>) </span><br><span class="line">hello world </span><br><span class="line"><span class="comment"># 脚本 </span></span><br><span class="line">Centos-Aliyun$ cat test.lua </span><br><span class="line"><span class="meta">#!/usr/bin/lua </span></span><br><span class="line"><span class="built_in">print</span>(<span class="string">&quot;hello world&quot;</span>) </span><br><span class="line">Centos-Aliyun$ chmod a+rx ./<span class="built_in">test</span>/lua </span><br><span class="line">Centos-Aliyun$ ./test.lua </span><br><span class="line">hello word</span><br></pre></td></tr></table></figure>
+
+<h5 id="Lua基本语法"><a href="#Lua基本语法" class="headerlink" title="Lua基本语法"></a>Lua基本语法</h5><p>一，注释：- 行注释</p>
+<p>– [[</p>
+<p>块注释</p>
+<p>–]]</p>
+<p>二，变量</p>
+<figure class="highlight lua"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">a = <span class="string">&#x27;alo\n123&quot;&#x27;</span></span><br><span class="line">a = <span class="string">&quot;alo\n123&quot;</span><span class="string">&quot;</span></span><br><span class="line"><span class="string">a = &#x27;\97lo\10\04923&quot;</span><span class="string">&#x27;</span></span><br><span class="line"><span class="string">a = [[alo</span></span><br><span class="line"><span class="string">123&quot;]]</span></span><br></pre></td></tr></table></figure>
+
+<p>布尔类型只有nil和false是false，数字0、’’ 空字符串(‘ \0’)都是true</p>
+<p>lua中的变量如果没有特殊说明则都是全局变量，局部变量使用local定义。</p>
+<p>三，while循环语句</p>
+<figure class="highlight lua"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">sum = <span class="number">0</span></span><br><span class="line">num = <span class="number">1</span></span><br><span class="line"><span class="keyword">while</span> num &lt;= <span class="number">100</span> <span class="keyword">do</span></span><br><span class="line">    sum = sum + num</span><br><span class="line">    num = num + <span class="number">1</span></span><br><span class="line"><span class="keyword">end</span></span><br><span class="line"><span class="built_in">print</span>(<span class="string">&quot;sum = &quot;</span>, sum)</span><br></pre></td></tr></table></figure>
+
+<p>Lua没有++或者+=操作。</p>
+<p>四，for循环语句</p>
+<figure class="highlight lua"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">sum = <span class="number">0</span></span><br><span class="line"><span class="keyword">for</span> i =<span class="number">1</span> <span class="number">100</span> <span class="keyword">do</span></span><br><span class="line">    sum = sum + i</span><br><span class="line"><span class="keyword">end</span></span><br></pre></td></tr></table></figure>
+
+<p>五，if判断语法</p>
+<figure class="highlight lua"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> age == <span class="number">40</span> <span class="keyword">and</span> sex == <span class="string">&quot;Male&quot;</span> <span class="keyword">then</span> </span><br><span class="line">  <span class="built_in">print</span>(<span class="string">&quot;Mans age than 40&quot;</span>) </span><br><span class="line"><span class="keyword">elseif</span> age &gt; <span class="number">60</span> <span class="keyword">and</span> sex ~= <span class="string">&quot;Fameale&quot;</span> <span class="keyword">then</span> - ~=表示不等于 </span><br><span class="line">  <span class="built_in">print</span>(<span class="string">&quot;age than 60&quot;</span>); </span><br><span class="line"><span class="keyword">else</span> <span class="keyword">local</span> age = <span class="built_in">io</span>.<span class="built_in">read</span>() - 从终断读取信息 </span><br><span class="line">  <span class="built_in">print</span>(<span class="string">&quot;Your age is&quot;</span>..age) - ..表示字符串拼接 </span><br><span class="line"><span class="keyword">end</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>io库分别从stdin和stdout读写的read和write函数</p>
+</blockquote>
+<h5 id="Nginx-Lua环境搭建"><a href="#Nginx-Lua环境搭建" class="headerlink" title="Nginx + Lua环境搭建"></a>Nginx + Lua环境搭建</h5><ul>
+<li>安装LuaJIT</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">wget http://luajit.org/download/LuaJIT-2.0.2.tar.gz </span><br><span class="line">make install PREFIX=/usr/<span class="built_in">local</span>/LuaJIT </span><br><span class="line"><span class="built_in">export</span> LUAJIT_LIB=/usr/<span class="built_in">local</span>/LuaJIT/lib </span><br><span class="line"><span class="built_in">export</span> LUAJIT_INC=/usr/<span class="built_in">local</span>/LuaJIT/include/luajit-2.0</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>ngx_devel_kit和lua-nginx-module安装</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> /opt/download </span><br><span class="line">wget https://github.com/simpl/ngx_devel_kit/archive/v0.3.0.tar.gz </span><br><span class="line">wget https://github.com/openresty/lua-nginx-module/archive/v0.10.9rc7.tar.gz </span><br><span class="line">tar -zxvf v0.3.0.tar.gz </span><br><span class="line">tar -zxvf v0.10.9rc7.tar.gz</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>重新编译nginx</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> /opt/download </span><br><span class="line">wget http://nginx.org/download/nginx-1.12.1.tag.gz </span><br><span class="line">tar -zxvf nginx-1.12.1.tag.gz <span class="built_in">cd</span> nginx-1.12.1 </span><br><span class="line">./configure --prefix=/etc/nginx \ </span><br><span class="line">--sbin-path=/usr/sbin/nginx \ </span><br><span class="line">--modules-path=/usr/lib64/nginx/modules \ </span><br><span class="line">--conf-path=/etc/nginx/nginx.conf \ </span><br><span class="line">--error-log-path=/var/run/nginx/error.log \ </span><br><span class="line">--http-log-path=/var/<span class="built_in">log</span>/nginx/access.log \ </span><br><span class="line">--pid-path=/var/run/nginx.pid \ </span><br><span class="line">--lock-path=/var/run/nginx.lock \ </span><br><span class="line">--http-client-body-temp-path=/var/cache/nginx/client_temp \ </span><br><span class="line">--http-proxy-temp-path=/var/cache/nginx/proxy_temp \ </span><br><span class="line">--http-fastcgi-temp-path=/var/cache/nginx/fastcgi-temp \ </span><br><span class="line">--http-uwsgi-temp-path=/var/cache/nginx/uwsgi-temp \ </span><br><span class="line">--http-scgi-temp-path=/var/cache/nginx/scgi-temp \ </span><br><span class="line">--user=nginx \ </span><br><span class="line">--group=nginx \ </span><br><span class="line">--with-compat \ </span><br><span class="line">--with-file-aio \ </span><br><span class="line">--with-threads \ </span><br><span class="line">--with-http_addition_module \ </span><br><span class="line">--with-http_auth_request_module \ </span><br><span class="line">--with-http_dav_module \ </span><br><span class="line">--with-http_flv_module \ </span><br><span class="line">--with-http_gunzip_module \ </span><br><span class="line">--with-http_gzip_static_module \ </span><br><span class="line">--with-http_mp4_module \ </span><br><span class="line">--with-http_random_index_module \ </span><br><span class="line">--with-http_realip_module \ </span><br><span class="line">--with-http_secure_link_module \ </span><br><span class="line">--with-http_slice_module \ </span><br><span class="line">--with-http_ssl_module \ </span><br><span class="line">--with-http_stub_status_module \ </span><br><span class="line">--with-http_sub_module \ </span><br><span class="line">--with-http_v2_module \ </span><br><span class="line">--with-mail \ </span><br><span class="line">--with-mail_ssl_module \ </span><br><span class="line">--with-stream \ </span><br><span class="line">--with-stream_realip_module \ </span><br><span class="line">--with-stream_ssl_module \ </span><br><span class="line">--with-stream_ssl_preread_module \ </span><br><span class="line">--with-cc-opt=<span class="string">&#x27;-O2 -g -pipe -Wall -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector-strong --param=ssp-buffer-size=4 -grecord-gcc-switches -m64 -mtune=generic -fPIC&#x27;</span> \ </span><br><span class="line">--with-ld-opt=<span class="string">&#x27;-Wl,-z,relro -Wl,-z,now -pie&#x27;</span> \ </span><br><span class="line">--add-module=/opt/download/ngx_devel_kit-0.3.0 \ </span><br><span class="line">--add-module=/opt/download/lua-nginx-module-0.10.9rc7 </span><br><span class="line">make &amp;&amp; make install <span class="comment">## make -j 4 &amp;&amp; make install</span></span><br></pre></td></tr></table></figure>
+
+<h5 id="Nginx调用Lua模块指令"><a href="#Nginx调用Lua模块指令" class="headerlink" title="Nginx调用Lua模块指令"></a>Nginx调用Lua模块指令</h5><blockquote>
+<p>Nginx的可插拔模块化加载执行共有11个处理阶段</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th align="center">指令</th>
+<th align="left">描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">set_by_lua、set_by_lua_file</td>
+<td align="left">设置Nginx变量，可以实现复杂的赋值逻辑</td>
+</tr>
+<tr>
+<td align="center">access_by_lua、access_by_lua_file</td>
+<td align="left">请求访问阶段处理，用于访问控制</td>
+</tr>
+<tr>
+<td align="center">content_by_lua、content_by_lua_file</td>
+<td align="left">内容处理器，接受请求处理并输出响应</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>Nginx Lua API</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th align="center">API</th>
+<th align="center">描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">nix.var</td>
+<td align="center">nginx变量</td>
+</tr>
+<tr>
+<td align="center">ngx.req.get_header</td>
+<td align="center">获取请求头</td>
+</tr>
+<tr>
+<td align="center">ngx.req.get_uri_args</td>
+<td align="center">获取url请求参数</td>
+</tr>
+<tr>
+<td align="center">ngx.redirect</td>
+<td align="center">重定向</td>
+</tr>
+<tr>
+<td align="center">ngx.print</td>
+<td align="center">输出相应内容</td>
+</tr>
+<tr>
+<td align="center">ngx.say</td>
+<td align="center">同ngx.print，但是会最后输出一个换行符</td>
+</tr>
+<tr>
+<td align="center">ngx.header</td>
+<td align="center">输出响应头</td>
+</tr>
+<tr>
+<td align="center">…</td>
+<td align="center"></td>
+</tr>
+</tbody></table>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          
+          <div class="post-tags">
+              <a href="/tags/nginx/" rel="tag"><i class="fa fa-tag"></i> nginx</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2018/09/25/Nginx%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3-%E9%AB%98%E7%BA%A7-%E5%9B%9B/" rel="prev" title="Nginx深入了解-高级(四)">
+      <i class="fa fa-chevron-left"></i> Nginx深入了解-高级(四)
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2019/01/27/MYSQL%E4%BA%8B%E5%8A%A1%E9%9A%94%E7%A6%BB/" rel="next" title="MYSQL事务隔离">
+      MYSQL事务隔离 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-5"><a class="nav-link" href="#Lua%E5%AE%89%E8%A3%85"><span class="nav-number">1.</span> <span class="nav-text">Lua安装</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Lua%E8%BF%90%E8%A1%8C"><span class="nav-number">2.</span> <span class="nav-text">Lua运行</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Lua%E5%9F%BA%E6%9C%AC%E8%AF%AD%E6%B3%95"><span class="nav-number">3.</span> <span class="nav-text">Lua基本语法</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Nginx-Lua%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA"><span class="nav-number">4.</span> <span class="nav-text">Nginx + Lua环境搭建</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Nginx%E8%B0%83%E7%94%A8Lua%E6%A8%A1%E5%9D%97%E6%8C%87%E4%BB%A4"><span class="nav-number">5.</span> <span class="nav-text">Nginx调用Lua模块指令</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="kirintang"
+      src="https://avatars.githubusercontent.com/u/8286273">
+  <p class="site-author-name" itemprop="name">kirintang</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">28</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/kirintang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;kirintang" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:tangchunlinit@foxmail.com" title="E-Mail → mailto:tangchunlinit@foxmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">kirintang</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

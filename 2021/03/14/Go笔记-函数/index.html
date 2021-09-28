@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Menlo:300,300italic,400,400italic,700,700italic|monospace:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":"mac"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="Go是编译型语言，所以函数编写的顺序是无关紧要的。编写多个函数的主要目的是将一个需要很多行代码的复杂问题分解为一系列简单的函数来解决，有助于代码复用。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Go笔记-函数">
+<meta property="og:url" content="http://example.com/2021/03/14/Go%E7%AC%94%E8%AE%B0-%E5%87%BD%E6%95%B0/index.html">
+<meta property="og:site_name" content="KirinTang">
+<meta property="og:description" content="Go是编译型语言，所以函数编写的顺序是无关紧要的。编写多个函数的主要目的是将一个需要很多行代码的复杂问题分解为一系列简单的函数来解决，有助于代码复用。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2021-03-14T04:53:12.000Z">
+<meta property="article:modified_time" content="2021-03-15T10:01:24.485Z">
+<meta property="article:author" content="kirintang">
+<meta property="article:tag" content="go">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://example.com/2021/03/14/Go%E7%AC%94%E8%AE%B0-%E5%87%BD%E6%95%B0/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Go笔记-函数 | KirinTang</title>
+  
+
+
+  <script>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?1845b2e87cd45ab676f07dac5bde9ae3";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">KirinTang</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">Code And Learn</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-commonweal">
+
+    <a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/03/14/Go%E7%AC%94%E8%AE%B0-%E5%87%BD%E6%95%B0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="https://avatars.githubusercontent.com/u/8286273">
+      <meta itemprop="name" content="kirintang">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="KirinTang">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Go笔记-函数
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-03-14 12:53:12" itemprop="dateCreated datePublished" datetime="2021-03-14T12:53:12+08:00">2021-03-14</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>Go是编译型语言，所以函数编写的顺序是无关紧要的。编写多个函数的主要目的是将一个需要很多行代码的复杂问题分解为一系列简单的函数来解决，有助于代码复用。</p>
+<span id="more"></span>
+
+<p>Go里有三种类型的函数：</p>
+<ul>
+<li>带有参数的普通函数</li>
+<li>匿名函数</li>
+<li>方法</li>
+</ul>
+<p>除了<code>main()</code>、<code>init()</code>函数外，其它所有类型的函数都可以有参数与返回值。函数参数、返回值以及它们的类型被统称为函数签名。</p>
+<p>函数被调用格式：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">包.函数名(参数<span class="number">1</span>, 参数<span class="number">2</span>, ...)</span><br></pre></td></tr></table></figure>
+
+<p>函数是一等公民，它们可以赋值给变量，<code>add := binOp</code>。</p>
+<h4 id="函数参数与返回值"><a href="#函数参数与返回值" class="headerlink" title="函数参数与返回值"></a>函数参数与返回值</h4><p>Go函数可以传递多个参数，并且可以有多个返回值，这是相对于C、C++、Java等其他语言的一大特性。</p>
+<p>任何一个有返回值的函数，都必须以<code>return</code>或者<code>panic</code>结束。在函数块里，<code>return</code>之后的语句都不会被执行，如果一个函数需要返回值，这个函数里每一个分支都要有返回值。如下面这个函数不会被编译：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(st *Stack)</span> <span class="title">Pop</span><span class="params">()</span> <span class="title">int</span></span> &#123;</span><br><span class="line">    v := <span class="number">0</span></span><br><span class="line">    <span class="keyword">for</span> ix := <span class="built_in">len</span>(st) - <span class="number">1</span>; ix &gt;= <span class="number">0</span>; ix-- &#123;</span><br><span class="line">        <span class="keyword">if</span> v = st[ix]; v != <span class="number">0</span> &#123;</span><br><span class="line">            st[ix] = <span class="number">0</span></span><br><span class="line">            <span class="keyword">return</span> v</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>正确的写法:</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(st *Stack)</span> <span class="title">Pop</span><span class="params">()</span> <span class="title">int</span></span> &#123;</span><br><span class="line">    v := <span class="number">0</span></span><br><span class="line">    <span class="keyword">for</span> ix := <span class="built_in">len</span>(st) - <span class="number">1</span>; ix &gt;= <span class="number">0</span>; ix-- &#123;</span><br><span class="line">        <span class="keyword">if</span> v = st[ix]; v != <span class="number">0</span> &#123;</span><br><span class="line">            st[ix] = <span class="number">0</span></span><br><span class="line">            <span class="keyword">return</span> v</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  	<span class="keyword">return</span> v</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h5 id="函数传参"><a href="#函数传参" class="headerlink" title="函数传参"></a>函数传参</h5><ul>
+<li><p>函数的参数传递有两种：按值传递、按引用传递。</p>
+<ul>
+<li><p>Go默认使用按值传递来传递参数，函数在接收参数后被修改，不会影响原来参数的值。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Function(arg <span class="keyword">type</span>)&#123;&#125;</span><br></pre></td></tr></table></figure></li>
+<li><p>如果希望函数可以直接修改参数的值，就要使用按引用传递来进行传参，此时传递给函数的是一个指针。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Function(a *A)&#123;&#125;</span><br></pre></td></tr></table></figure></li>
+</ul>
+</li>
+</ul>
+<h5 id="返回值"><a href="#返回值" class="headerlink" title="返回值"></a>返回值</h5><p>当函数需要返回多个非命名返回值时，需要使用<code>()</code>把他们括起来，如<code>(int, int)</code></p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">getX2AndX3</span><span class="params">(input <span class="keyword">int</span>)</span> <span class="params">(<span class="keyword">int</span>, <span class="keyword">int</span>)</span></span> &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="number">2</span> * input, <span class="number">3</span> * input</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>当函数需要返回命名返回值时，即使是一个返回值也需要括起来</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">getX2AndX3_2</span><span class="params">(input <span class="keyword">int</span>)</span> <span class="params">(x2 <span class="keyword">int</span>, x3 <span class="keyword">int</span>)</span></span> &#123;</span><br><span class="line">    x2 = <span class="number">2</span> * input</span><br><span class="line">    x3 = <span class="number">3</span> * input</span><br><span class="line">    <span class="keyword">return</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h5 id="空白符"><a href="#空白符" class="headerlink" title="空白符"></a>空白符</h5><p>空白符<code>_</code>用来匹配一些使用不到的返回值，然后丢弃掉。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> <span class="string">&quot;fmt&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">    <span class="keyword">var</span> i1 <span class="keyword">int</span></span><br><span class="line">    <span class="keyword">var</span> f1 <span class="keyword">float32</span></span><br><span class="line">    i1, _, f1 = ThreeValues()</span><br><span class="line">    fmt.Printf(<span class="string">&quot;The int: %d, the float: %f \n&quot;</span>, i1, f1)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">ThreeValues</span><span class="params">()</span> <span class="params">(<span class="keyword">int</span>, <span class="keyword">int</span>, <span class="keyword">float32</span>)</span></span> &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="number">5</span>, <span class="number">6</span>, <span class="number">7.5</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h5 id="改变外部变量"><a href="#改变外部变量" class="headerlink" title="改变外部变量"></a>改变外部变量</h5><p>使用按值传递，不但可以节省内存，还可以改变外部变量的值，修改的值不需要再<code>return</code>回来。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">    <span class="string">&quot;fmt&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">Multiply</span><span class="params">(a, b <span class="keyword">int</span>, reply *<span class="keyword">int</span>)</span></span> &#123;</span><br><span class="line">    *reply = a * b</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">    n := <span class="number">0</span></span><br><span class="line">    reply := &amp;n</span><br><span class="line">    Multiply(<span class="number">10</span>, <span class="number">5</span>, reply)</span><br><span class="line">    fmt.Println(<span class="string">&quot;Multiply:&quot;</span>, *reply)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h4 id="传递变长参数"><a href="#传递变长参数" class="headerlink" title="传递变长参数"></a>传递变长参数</h4><p>函数传参如<code>Function(...type)</code>的形式传递，说明函数处理的是一个变长的参数。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">myFunc</span><span class="params">(a, b, c ...<span class="keyword">int</span>)</span></span> &#123;&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> <span class="string">&quot;fmt&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	x := min(<span class="number">1</span>, <span class="number">3</span>, <span class="number">2</span>, <span class="number">0</span>)</span><br><span class="line">	fmt.Printf(<span class="string">&quot;The minimum is: %d\n&quot;</span>, x)</span><br><span class="line">	slice := []<span class="keyword">int</span>&#123;<span class="number">7</span>,<span class="number">9</span>,<span class="number">3</span>,<span class="number">5</span>,<span class="number">1</span>&#125;</span><br><span class="line">	x = min(slice...)</span><br><span class="line">	fmt.Printf(<span class="string">&quot;The minimum in the slice is: %d&quot;</span>, x)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">min</span><span class="params">(s ...<span class="keyword">int</span>)</span> <span class="title">int</span></span> &#123;</span><br><span class="line">	<span class="keyword">if</span> <span class="built_in">len</span>(s)==<span class="number">0</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> <span class="number">0</span></span><br><span class="line">	&#125;</span><br><span class="line">	min := s[<span class="number">0</span>]</span><br><span class="line">	<span class="keyword">for</span> _, v := <span class="keyword">range</span> s &#123;</span><br><span class="line">		<span class="keyword">if</span> v &lt; min &#123;</span><br><span class="line">			min = v</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> min</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h4 id="defer和追踪"><a href="#defer和追踪" class="headerlink" title="defer和追踪"></a>defer和追踪</h4><p>关键字 defer 允许我们推迟到函数返回之前（或任意位置执行 <code>return</code> 语句之后）一刻才执行某个语句或函数</p>
+<p>类似于其他语言如<code>Java</code>的<code>finally</code></p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"><span class="keyword">import</span> <span class="string">&quot;fmt&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	function1()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">function1</span><span class="params">()</span></span> &#123;</span><br><span class="line">	fmt.Printf(<span class="string">&quot;In function1 at the top\n&quot;</span>)</span><br><span class="line">	<span class="keyword">defer</span> function2()</span><br><span class="line">	fmt.Printf(<span class="string">&quot;In function1 at the bottom!\n&quot;</span>)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">function2</span><span class="params">()</span></span> &#123;</span><br><span class="line">	fmt.Printf(<span class="string">&quot;Function2: Deferred until the end of the calling function!&quot;</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>输出</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">In function1 at the top</span><br><span class="line">In function1 at the bottom!</span><br><span class="line">Function2: Deferred until the end of the calling function!</span><br></pre></td></tr></table></figure>
+
+<p>defer常见的一些操作：</p>
+<ul>
+<li>关闭文件流</li>
+</ul>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">defer</span> file.Close()</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>解锁一个加锁的资源</li>
+</ul>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">mu.Lock()  </span><br><span class="line"><span class="keyword">defer</span> mu.Unlock() </span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>关闭数据库</li>
+</ul>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">defer</span> disconnectFromDB()</span><br></pre></td></tr></table></figure>
+
+<h4 id="闭包"><a href="#闭包" class="headerlink" title="闭包"></a>闭包</h4><p>不希望1给函数起名，可使用闭包:</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span><span class="params">(x, y <span class="keyword">int</span>)</span> <span class="title">int</span></span> &#123; <span class="keyword">return</span> x + y &#125;</span><br></pre></td></tr></table></figure>
+
+<p>匿名函数不能独立存在：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">fplus := <span class="function"><span class="keyword">func</span><span class="params">(x, y <span class="keyword">int</span>)</span> <span class="title">int</span></span> &#123; <span class="keyword">return</span> x + y &#125;</span><br></pre></td></tr></table></figure>
+
+<p>通过变量名对函数进行调用</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">fplus(<span class="number">3</span>,<span class="number">4</span>)</span><br></pre></td></tr></table></figure>
+
+<p>也可以直接对匿名函数进行调用：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span><span class="params">(x, y <span class="keyword">int</span>)</span> <span class="title">int</span></span> &#123; </span><br><span class="line">  <span class="keyword">return</span> x + y </span><br><span class="line">&#125;(<span class="number">3</span>, <span class="number">4</span>)</span><br></pre></td></tr></table></figure>
+
+<h4 id="计算函数执行时间"><a href="#计算函数执行时间" class="headerlink" title="计算函数执行时间"></a>计算函数执行时间</h4><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">start := time.Now()</span><br><span class="line">function()</span><br><span class="line">end := time.Now()</span><br><span class="line">delta := end.Sub(start)</span><br><span class="line">fmt.Printf(<span class="string">&quot;function took this amount of time: %s\n&quot;</span>, delta)</span><br></pre></td></tr></table></figure>
+
+<h4 id="通过内存缓存来提升性能"><a href="#通过内存缓存来提升性能" class="headerlink" title="通过内存缓存来提升性能"></a>通过内存缓存来提升性能</h4><p>通过在内存中缓存和重复利用相同计算的结果，称之为内存缓存。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">	<span class="string">&quot;fmt&quot;</span></span><br><span class="line">	<span class="string">&quot;time&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> LIM = <span class="number">41</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">var</span> fibs [LIM]<span class="keyword">uint64</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="keyword">var</span> result <span class="keyword">uint64</span> = <span class="number">0</span></span><br><span class="line">	start := time.Now()</span><br><span class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; LIM; i++ &#123;</span><br><span class="line">		result = fibonacci(i)</span><br><span class="line">		fmt.Printf(<span class="string">&quot;fibonacci(%d) is: %d\n&quot;</span>, i, result)</span><br><span class="line">	&#125;</span><br><span class="line">	end := time.Now()</span><br><span class="line">	delta := end.Sub(start)</span><br><span class="line">	fmt.Printf(<span class="string">&quot;func took this amount of time: %s\n&quot;</span>, delta)</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">fibonacci</span><span class="params">(n <span class="keyword">int</span>)</span> <span class="params">(res <span class="keyword">uint64</span>)</span></span> &#123;</span><br><span class="line">	<span class="comment">// 见哈是否有缓存值</span></span><br><span class="line">	<span class="keyword">if</span> fibs[n] != <span class="number">0</span> &#123;</span><br><span class="line">		res = fibs[n]</span><br><span class="line">		<span class="keyword">return</span></span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">if</span> n &lt;= <span class="number">1</span> &#123;</span><br><span class="line">		res = <span class="number">1</span></span><br><span class="line">	&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">		res = fibonacci(n<span class="number">-1</span>) + fibonacci(n<span class="number">-2</span>)</span><br><span class="line">	&#125;</span><br><span class="line">	fibs[n] = res <span class="comment">// 缓存值</span></span><br><span class="line">	<span class="keyword">return</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          
+          <div class="post-tags">
+              <a href="/tags/go/" rel="tag"><i class="fa fa-tag"></i> go</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/03/13/Go%E7%AC%94%E8%AE%B0-%E5%9F%BA%E7%A1%80%E7%BB%93%E6%9E%84%E5%92%8C%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B/" rel="prev" title="Go笔记-基础结构和数据类型">
+      <i class="fa fa-chevron-left"></i> Go笔记-基础结构和数据类型
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/03/18/Go%E7%AC%94%E8%AE%B0-%E6%95%B0%E7%BB%84%E4%B8%8E%E5%88%87%E7%89%87/" rel="next" title="Go笔记-数组与切片">
+      Go笔记-数组与切片 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%87%BD%E6%95%B0%E5%8F%82%E6%95%B0%E4%B8%8E%E8%BF%94%E5%9B%9E%E5%80%BC"><span class="nav-number">1.</span> <span class="nav-text">函数参数与返回值</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E5%87%BD%E6%95%B0%E4%BC%A0%E5%8F%82"><span class="nav-number">1.1.</span> <span class="nav-text">函数传参</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E8%BF%94%E5%9B%9E%E5%80%BC"><span class="nav-number">1.2.</span> <span class="nav-text">返回值</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E7%A9%BA%E7%99%BD%E7%AC%A6"><span class="nav-number">1.3.</span> <span class="nav-text">空白符</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E6%94%B9%E5%8F%98%E5%A4%96%E9%83%A8%E5%8F%98%E9%87%8F"><span class="nav-number">1.4.</span> <span class="nav-text">改变外部变量</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%BC%A0%E9%80%92%E5%8F%98%E9%95%BF%E5%8F%82%E6%95%B0"><span class="nav-number">2.</span> <span class="nav-text">传递变长参数</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#defer%E5%92%8C%E8%BF%BD%E8%B8%AA"><span class="nav-number">3.</span> <span class="nav-text">defer和追踪</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%97%AD%E5%8C%85"><span class="nav-number">4.</span> <span class="nav-text">闭包</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%AE%A1%E7%AE%97%E5%87%BD%E6%95%B0%E6%89%A7%E8%A1%8C%E6%97%B6%E9%97%B4"><span class="nav-number">5.</span> <span class="nav-text">计算函数执行时间</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%80%9A%E8%BF%87%E5%86%85%E5%AD%98%E7%BC%93%E5%AD%98%E6%9D%A5%E6%8F%90%E5%8D%87%E6%80%A7%E8%83%BD"><span class="nav-number">6.</span> <span class="nav-text">通过内存缓存来提升性能</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="kirintang"
+      src="https://avatars.githubusercontent.com/u/8286273">
+  <p class="site-author-name" itemprop="name">kirintang</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">28</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/kirintang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;kirintang" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:tangchunlinit@foxmail.com" title="E-Mail → mailto:tangchunlinit@foxmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">kirintang</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

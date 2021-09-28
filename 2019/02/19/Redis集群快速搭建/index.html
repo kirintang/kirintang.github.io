@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Menlo:300,300italic,400,400italic,700,700italic|monospace:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":"mac"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="我们知道，对于大型应用而言，如何保证线上功能稳定是一件很重要的事情；大多数的web应用都会用到缓存来降低数据库的压力，而单机缓存服务带来的问题是，一旦单机机器挂掉，所有的应用将无法使用。因此就需要有多台机器来保证服务的稳定，这里就涉及到了集群的概念。下面以redis5.0为实例进行快速搭建一个简单的集群。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Redis集群快速搭建">
+<meta property="og:url" content="http://example.com/2019/02/19/Redis%E9%9B%86%E7%BE%A4%E5%BF%AB%E9%80%9F%E6%90%AD%E5%BB%BA/index.html">
+<meta property="og:site_name" content="KirinTang">
+<meta property="og:description" content="我们知道，对于大型应用而言，如何保证线上功能稳定是一件很重要的事情；大多数的web应用都会用到缓存来降低数据库的压力，而单机缓存服务带来的问题是，一旦单机机器挂掉，所有的应用将无法使用。因此就需要有多台机器来保证服务的稳定，这里就涉及到了集群的概念。下面以redis5.0为实例进行快速搭建一个简单的集群。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://raw.githubusercontent.com/chunlintang/imgLib/master/20190219161228.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/chunlintang/imgLib/master/20190219164232.png">
+<meta property="article:published_time" content="2019-02-19T05:14:36.000Z">
+<meta property="article:modified_time" content="2021-03-11T02:13:30.469Z">
+<meta property="article:author" content="kirintang">
+<meta property="article:tag" content="redis">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/chunlintang/imgLib/master/20190219161228.png">
+
+<link rel="canonical" href="http://example.com/2019/02/19/Redis%E9%9B%86%E7%BE%A4%E5%BF%AB%E9%80%9F%E6%90%AD%E5%BB%BA/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Redis集群快速搭建 | KirinTang</title>
+  
+
+
+  <script>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?1845b2e87cd45ab676f07dac5bde9ae3";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">KirinTang</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">Code And Learn</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-commonweal">
+
+    <a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2019/02/19/Redis%E9%9B%86%E7%BE%A4%E5%BF%AB%E9%80%9F%E6%90%AD%E5%BB%BA/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="https://avatars.githubusercontent.com/u/8286273">
+      <meta itemprop="name" content="kirintang">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="KirinTang">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Redis集群快速搭建
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2019-02-19 13:14:36" itemprop="dateCreated datePublished" datetime="2019-02-19T13:14:36+08:00">2019-02-19</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <blockquote>
+<p>我们知道，对于大型应用而言，如何保证线上功能稳定是一件很重要的事情；大多数的web应用都会用到缓存来降低数据库的压力，而单机缓存服务带来的问题是，一旦单机机器挂掉，所有的应用将无法使用。因此就需要有多台机器来保证服务的稳定，这里就涉及到了集群的概念。下面以redis5.0为实例进行快速搭建一个简单的集群。</p>
+</blockquote>
+<span id="more"></span>
+
+<h5 id="环境"><a href="#环境" class="headerlink" title="环境"></a>环境</h5><ul>
+<li>Centos7</li>
+<li>Redis5.0.x</li>
+</ul>
+<h5 id="Redis安装"><a href="#Redis安装" class="headerlink" title="Redis安装"></a>Redis安装</h5><ol>
+<li><a target="_blank" rel="noopener" href="https://redis.io/download">下载</a>，我们这里使用5.0.3的stable版本</li>
+</ol>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">wget http://download.redis.io/releases/redis-5.0.3.tar.gz</span><br></pre></td></tr></table></figure>
+
+<ol start="2">
+<li>解压</li>
+</ol>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">tar -zxvf redis-5.0.5.tar.gz</span><br></pre></td></tr></table></figure>
+
+<ol start="3">
+<li>安装</li>
+</ol>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">cd redis-5.0.5</span><br><span class="line">make &amp;&amp; make install</span><br></pre></td></tr></table></figure>
+
+<p>至此，我们的redis已经安装完成。</p>
+<h5 id="集群搭建"><a href="#集群搭建" class="headerlink" title="集群搭建"></a>集群搭建</h5><ul>
+<li>基本配置</li>
+</ul>
+<p>在根目录下新建文件夹<code>redis-cluster</code>，复制redis-5.0.3 src下的<code>redis.conf</code>到<code>redis-cluster</code>分别命名为<code>master.conf</code>和<code>slave.conf</code>。分别修改这两个文件注释掉bind.</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> <span class="built_in">bind</span> 127.0.0.1</span></span><br></pre></td></tr></table></figure>
+
+<p>修改slave.conf文件，修改端口号，增加配置slaveof.</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 从节点这里我们使用6380端口</span></span><br><span class="line">port 7002</span><br><span class="line"><span class="meta">#</span><span class="bash"> 配置主节点的ip和端口号，这里我们使用本地的，根据情况如果使用其他机器作为主节点，可修改对应配置</span></span><br><span class="line">slaveof 127.0.0.1 6379</span><br></pre></td></tr></table></figure>
+
+<p>使用<code>redis-server</code>分别指定对应的配置文件启动，使用<code>info replication</code>可查看对应信息。</p>
+<p>6379:</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">➜ redis-cluster redis-cli -h 127.0.0.1 -p 6379 </span><br><span class="line">127.0.0.1:6379&gt; info replication </span><br><span class="line"><span class="meta">#</span><span class="bash"> Replication</span> </span><br><span class="line">role:master </span><br><span class="line">connected_slaves:1 </span><br><span class="line">slave0:ip=127.0.0.1,port=6380,state=online,offset=113,lag=0 </span><br><span class="line">master_repl_offset:113 </span><br><span class="line">repl_backlog_active:1 </span><br><span class="line">repl_backlog_size:1048576 </span><br><span class="line">repl_backlog_first_byte_offset:2 </span><br><span class="line">repl_backlog_histlen:112</span><br></pre></td></tr></table></figure>
+
+<p>6380:</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">➜ redis-cluster redis-cli -h 127.0.0.1 -p 7002 </span><br><span class="line">127.0.0.1:6380&gt; info replication </span><br><span class="line"><span class="meta">#</span><span class="bash"> Replication</span> </span><br><span class="line">role:slave </span><br><span class="line">master_host:127.0.0.1 </span><br><span class="line">master_port:6379 </span><br><span class="line">master_link_status:up </span><br><span class="line">master_last_io_seconds_ago:2 </span><br><span class="line">master_sync_in_progress:0 </span><br><span class="line">slave_repl_offset:99 </span><br><span class="line">slave_priority:100 </span><br><span class="line">slave_read_only:1 </span><br><span class="line">connected_slaves:0 </span><br><span class="line">master_repl_offset:0 </span><br><span class="line">repl_backlog_active:0 </span><br><span class="line">repl_backlog_size:1048576 </span><br><span class="line">repl_backlog_first_byte_offset:0 </span><br><span class="line">repl_backlog_histlen:0</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>哨兵</li>
+</ul>
+<p>至此，一个简单的集群就搭建成功了，但是有个弊端是一旦master挂掉之后，无法生成新的master节点，导致写操作就会失效。因此，我们需要在master挂掉之后会自动启动一个slave节点来代替master节点，使服务仍然可用，这里就用到了哨兵。</p>
+<p>哨兵的作用不言而喻，就是用来监控master节点的状态，并生成新的master节点。</p>
+<p>复制一份<code>redis-5.0.3/src</code>下的<code>redis-sentinel.conf</code>到<code>redis-cluster</code>下，命名为<code>redis-sentinel-7002.conf</code>，并修改如下配置。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">sentinel monitor mymaster 127.0.0.1 7002 2 # 哨兵监听的主节点的ip和端口号，2表示需要的哨兵数 </span><br><span class="line"><span class="meta">#</span><span class="bash"> Default is 30 seconds.</span> </span><br><span class="line">sentinel down-after-milliseconds mymaster 30000 # 超时时间，表示3s内没有响应则认为主节点down掉 </span><br><span class="line"><span class="meta">#</span><span class="bash"> Default is 3 minutes.</span> </span><br><span class="line">sentinel failover-timeout mymaster 180000 # 表示18s后，master节点仍然没有恢复，则重新生成新的master节点</span><br></pre></td></tr></table></figure>
+
+<p>配置完成后使用如下命令来启动sentinel:</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">redis-sentinel /etc/redis-cluster/redis-sentinel-7002.conf</span><br></pre></td></tr></table></figure>
+
+<p>我们可以模拟让<code>master</code>节点挂掉后看是否<code>7002</code>端口是否会变成新的<code>master</code>节点。手动kill掉<code>master</code>，然后使用<code>info replication</code>再次查看<code>7002</code>的信息。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">➜ redis-cluster redis-cli -h 127.0.0.1 -p 7002 </span><br><span class="line">127.0.0.1:7002&gt; info replication </span><br><span class="line"><span class="meta">#</span><span class="bash"> Replication</span> </span><br><span class="line">role:master </span><br><span class="line">connected_slaves:0 </span><br><span class="line">master_repl_offset:29 </span><br><span class="line">repl_backlog_active:1 </span><br><span class="line">repl_backlog_size:1048576 </span><br><span class="line">repl_backlog_first_byte_offset:2 </span><br><span class="line">repl_backlog_histlen:28</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>redis-cluster</li>
+</ul>
+<p>哨兵模式的缺点对数据量有限制，受限于机器的内存的最小节点，因此这还可以使用数据分片的方式来实现存储，即<code>redis-cluster</code>。</p>
+<p>修改配置，注释掉<code>slave.conf</code>的<code>slaveof</code>.</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> slaveof 127.0.0.1 6379</span></span><br></pre></td></tr></table></figure>
+
+<p>分别修改<code>6379</code>和<code>7002</code>修改以下配置：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">cluster-enabled yes </span><br><span class="line"><span class="meta">#</span><span class="bash"> Every cluster node has a cluster configuration file. This file is not</span> </span><br><span class="line"><span class="meta">#</span><span class="bash"> intended to be edited by hand. It is created and updated by Redis nodes.</span> </span><br><span class="line"><span class="meta">#</span><span class="bash"> Every Redis Cluster node requires a different cluster configuration file.</span> </span><br><span class="line"><span class="meta">#</span><span class="bash"> Make sure that instances running <span class="keyword">in</span> the same system <span class="keyword">do</span> not have</span> </span><br><span class="line"><span class="meta">#</span><span class="bash"> overlapping cluster configuration file names.</span> </span><br><span class="line">cluster-config-file nodes-6379.conf # 各自对应 </span><br><span class="line"><span class="meta">#</span><span class="bash"> Cluster node timeout is the amount of milliseconds a node must be unreachable</span> </span><br><span class="line"><span class="meta">#</span><span class="bash"> <span class="keyword">for</span> it to be considered <span class="keyword">in</span> failure state.</span> </span><br><span class="line"><span class="meta">#</span><span class="bash"> Most other internal time limits are multiple of the node timeout.</span> </span><br><span class="line">cluster-node-timeout 15000</span><br></pre></td></tr></table></figure>
+
+<p>我们复制多个配置文案命名为<code>redis-7002.conf ~ redis-7005.conf</code>；使用如下命令创建集群:</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">➜ redis-cluster redis-cli --cluster create 127.0.0.1:6379 127.0.0.1:7002 127.0.0.1:7003 127.0.0.1:7004 127.0.0.1:7005 127.0.0.1:7006 --cluster-replicas 1 </span><br><span class="line"><span class="meta">&gt;</span><span class="bash">&gt;&gt; Performing <span class="built_in">hash</span> slots allocation on 6 nodes...</span> </span><br><span class="line">Master[0] -&gt; Slots 0 - 5460 </span><br><span class="line">Master[1] -&gt; Slots 5461 - 10922 </span><br><span class="line">Master[2] -&gt; Slots 10923 - 16383 </span><br><span class="line">Adding replica 127.0.0.1:7004 to 127.0.0.1:6379 </span><br><span class="line">Adding replica 127.0.0.1:7005 to 127.0.0.1:7002 </span><br><span class="line">Adding replica 127.0.0.1:7006 to 127.0.0.1:7003 </span><br><span class="line"><span class="meta">&gt;</span><span class="bash">&gt;&gt; Trying to optimize slaves allocation <span class="keyword">for</span> anti-affinity</span> </span><br><span class="line">[WARNING] Some slaves are in the same host as their master </span><br><span class="line">M: 21aa1be9fdf18ba229646d31160c771c39298d29 127.0.0.1:6379 </span><br><span class="line">   slots:[0-5460] (5461 slots) master </span><br><span class="line">M: a2a10c4d6d9e691cb48890f3b9c3d1793613b1ce 127.0.0.1:7002 </span><br><span class="line">   slots:[5461-10922] (5462 slots) master </span><br><span class="line">M: 3a0b64b91fed7f9f096ffd7c98481d03be964a10 127.0.0.1:7003 </span><br><span class="line">   slots:[10923-16383] (5461 slots) master </span><br><span class="line">S: aafc91d92f75c5b1572b80ccca49e089bf377dc5 127.0.0.1:7004 </span><br><span class="line">   replicates 3a0b64b91fed7f9f096ffd7c98481d03be964a10 </span><br><span class="line">S: 0a7021591a5498f514005410eff25394d28d5f60 127.0.0.1:7005 </span><br><span class="line">   replicates 21aa1be9fdf18ba229646d31160c771c39298d29 </span><br><span class="line">S: 243d39cc830e701dd314f0d2a9273310c6f04abb 127.0.0.1:7006 </span><br><span class="line">   replicates a2a10c4d6d9e691cb48890f3b9c3d1793613b1ce </span><br><span class="line">Can I set the above configuration? (type &#x27;yes&#x27; to accept):</span><br></pre></td></tr></table></figure>
+
+<p>其中—<code>cluster-replicas 1</code>表示：一主一从配置，6个节点就是3主3从。</p>
+<p>各个节点已经分配好，输入<code>yes</code>，打印如下信息说明集群创建成功。</p>
+<p><img src="https://raw.githubusercontent.com/chunlintang/imgLib/master/20190219161228.png"></p>
+<p>如果我们想要删除或者添加节点，可以使用<code>redis-cli --cluster add-node</code>和<code>redis-cli --cluster del-node</code>命令。</p>
+<p>比如我们要新增一个节点<code>127.0.0.1:7007</code>，挂载在<code>6379</code>节点上。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">redis-cli --cluster add-node 127.0.0.1:7007 127.0.0.1:6379</span><br></pre></td></tr></table></figure>
+
+<p>删除该节点，先查出节点的id.</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">redis-cli --cluster check 127.0.0.1:7007</span><br></pre></td></tr></table></figure>
+
+<p>输出如下信息：</p>
+<p><img src="https://raw.githubusercontent.com/chunlintang/imgLib/master/20190219164232.png"></p>
+<p>找到对应节点id，这里是ef1035f7b8efe2b42cd1ac1c52833aca45edb498，执行以下命令即刻删除。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">redis-cli --cluster del-node 127.0.0.1:7007 ef1035f7b8efe2b42cd1ac1c52833aca45edb498</span><br></pre></td></tr></table></figure>
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          
+          <div class="post-tags">
+              <a href="/tags/redis/" rel="tag"><i class="fa fa-tag"></i> redis</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2019/01/30/Redis%E5%9C%A8%E5%AE%9E%E9%99%85%E5%B7%A5%E4%BD%9C%E4%B8%AD%E9%81%87%E5%88%B0%E7%9A%84%E5%90%84%E7%A7%8D%E5%BA%94%E7%94%A8%E5%9C%BA%E6%99%AF/" rel="prev" title="Redis在实际工作中遇到的各种应用场景">
+      <i class="fa fa-chevron-left"></i> Redis在实际工作中遇到的各种应用场景
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/03/11/Kubernetes%E5%BF%AB%E9%80%9F%E6%90%AD%E5%BB%BA%E4%B8%8E%E5%90%AF%E5%8A%A8/" rel="next" title="Kubernetes快速搭建与启动">
+      Kubernetes快速搭建与启动 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E7%8E%AF%E5%A2%83"><span class="nav-number">1.</span> <span class="nav-text">环境</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Redis%E5%AE%89%E8%A3%85"><span class="nav-number">2.</span> <span class="nav-text">Redis安装</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E9%9B%86%E7%BE%A4%E6%90%AD%E5%BB%BA"><span class="nav-number">3.</span> <span class="nav-text">集群搭建</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="kirintang"
+      src="https://avatars.githubusercontent.com/u/8286273">
+  <p class="site-author-name" itemprop="name">kirintang</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">28</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/kirintang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;kirintang" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:tangchunlinit@foxmail.com" title="E-Mail → mailto:tangchunlinit@foxmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">kirintang</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

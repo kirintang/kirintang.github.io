@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Menlo:300,300italic,400,400italic,700,700italic|monospace:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":"mac"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="Nginx的安装及相关参数介绍。yum安装nginx后可通过命令rpm -pl nginx查看相关的安装目录。如下:">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Nginx深入了解-基础(二)">
+<meta property="og:url" content="http://example.com/2018/07/17/Nginx%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3-%E5%9F%BA%E7%A1%80-%E4%BA%8C/index.html">
+<meta property="og:site_name" content="KirinTang">
+<meta property="og:description" content="Nginx的安装及相关参数介绍。yum安装nginx后可通过命令rpm -pl nginx查看相关的安装目录。如下:">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2018-07-17T05:56:27.000Z">
+<meta property="article:modified_time" content="2021-03-11T07:21:39.536Z">
+<meta property="article:author" content="kirintang">
+<meta property="article:tag" content="nginx">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://example.com/2018/07/17/Nginx%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3-%E5%9F%BA%E7%A1%80-%E4%BA%8C/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Nginx深入了解-基础(二) | KirinTang</title>
+  
+
+
+  <script>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?1845b2e87cd45ab676f07dac5bde9ae3";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">KirinTang</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">Code And Learn</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-commonweal">
+
+    <a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2018/07/17/Nginx%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3-%E5%9F%BA%E7%A1%80-%E4%BA%8C/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="https://avatars.githubusercontent.com/u/8286273">
+      <meta itemprop="name" content="kirintang">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="KirinTang">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Nginx深入了解-基础(二)
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2018-07-17 13:56:27" itemprop="dateCreated datePublished" datetime="2018-07-17T13:56:27+08:00">2018-07-17</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>Nginx的安装及相关参数介绍。yum安装nginx后可通过命令rpm -pl nginx查看相关的安装目录。如下:</p>
+<span id="more"></span>
+
+<ul>
+<li>参数介绍</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>路径</th>
+<th>类型</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>/etc/logrotate.d/nginx</td>
+<td>配置文件</td>
+<td>Nginx日志轮转，用于logrotate服务的日志切割</td>
+</tr>
+<tr>
+<td>/etc/nginx /etc/nginx/nginx.conf /etc/nginx/conf.d /etc/nginx/conf.d/default.conf</td>
+<td>目录，配置文件</td>
+<td>nginx主配置文件</td>
+</tr>
+<tr>
+<td>/etc/nginx/fastcgi_params /etc/nginx/uwsgi_params /etc/nginx/scgi_params</td>
+<td>配置文件</td>
+<td>编码转换映射转换文件</td>
+</tr>
+<tr>
+<td>/etc/nginx/mime.types</td>
+<td>配置文件</td>
+<td>设置http协议的content-type与扩展名对应关系</td>
+</tr>
+<tr>
+<td>/usr/lib/systemd/system/nginx-debug.service /usr/lib/systemd/system/nginx.service    /etc/sysconfig/nginx /etc/sysconfig/nginx-debug</td>
+<td>配置文件</td>
+<td>用于配置系统守护进程管理器管理方式</td>
+</tr>
+<tr>
+<td>/usr/lib64/nginx/modules /etc/nginx/modules</td>
+<td>目录</td>
+<td>nginx模块目录</td>
+</tr>
+<tr>
+<td>/usr/sbin/nginx /usr/sbin/nginx-debug</td>
+<td>命令</td>
+<td>nginx服务的启动管理的终端命令</td>
+</tr>
+<tr>
+<td>/usr/share/doc/nginx-版本号 /usr/share/doc/nginx-版本号/COPYRIGHT /usr/share/man/man8/nginx.8.gz</td>
+<td>文件、目录</td>
+<td>ginx手册、帮助文件</td>
+</tr>
+<tr>
+<td>/var/cache/nginx</td>
+<td>目录</td>
+<td>nginx的缓存目录，nginx布景可以用作服务代理，还可以用来做缓存服务</td>
+</tr>
+<tr>
+<td>/var/log/nginx</td>
+<td>目录</td>
+<td>nginx日志目</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>使用<code>nginx -V</code>查看配置参数:</p>
+</blockquote>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">configure arguments: --prefix=/etc/nginx --sbin-path=/usr/sbin/nginx --modules-path=/usr/lib64/nginx/modules --conf-path=/etc/nginx/nginx.conf --error-log-path=/var/<span class="built_in">log</span>/nginx/error.log --http-log-path=/var/<span class="built_in">log</span>/nginx/access.log --pid-path=/var/run/nginx.pid --lock-path=/var/run/nginx.lock --http-client-body-temp-path=/var/cache/nginx/client_temp --http-proxy-temp-path=/var/cache/nginx/proxy_temp --http-fastcgi-temp-path=/var/cache/nginx/fastcgi_temp --http-uwsgi-temp-path=/var/cache/nginx/uwsgi_temp --http-scgi-temp-path=/var/cache/nginx/scgi_temp --user=nginx --group=nginx --with-compat --with-file-aio --with-threads --with-http_addition_module --with-http_auth_request_module --with-http_dav_module --with-http_flv_module --with-http_gunzip_module --with-http_gzip_static_module --with-http_mp4_module --with-http_random_index_module --with-http_realip_module --with-http_secure_link_module --with-http_slice_module --with-http_ssl_module --with-http_stub_status_module --with-http_sub_module --with-http_v2_module --with-mail --with-mail_ssl_module --with-stream --with-stream_realip_module --with-stream_ssl_module --with-stream_ssl_preread_module --with-cc-opt=<span class="string">&#x27;-O2 -g -pipe -Wall -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector-strong --param=ssp-buffer-size=4 -grecord-gcc-switches -m64 -mtune=generic -fPIC&#x27;</span> --with-ld-opt=<span class="string">&#x27;-Wl,-z,relro -Wl,-z,now -pie&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th>编译</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>–prefix=/etc/nginx \ –sbin-path=/usr/sbin/nginx \ –modules-path=/usr/lib64/nginx/modules \ –conf-path=/etc/nginx/nginx.conf \ –error-log-path=/var/log/nginx/error.log –http-log-path=/var/log/nginx/access.log \ –pid-path=/var/run/nginx.pid \ –lock-path=/var/run/nginx.lock</td>
+<td>安装目的目录或路径</td>
+</tr>
+<tr>
+<td>–http-client-body-temp-path=/var/cache/nginx/client_temp \ –http-proxy-temp-path=/var/cache/nginx/proxy_temp \ –http-fastcgi-temp-path=/var/cache/nginx/fastcgi_temp \ –http-uwsgi-temp-path=/var/cache/nginx/uwsgi_temp \ –http-scgi-temp-path=/var/cache/nginx/scgi_temp</td>
+<td>执行对应的模块时，nginx所保留的临时性文件</td>
+</tr>
+<tr>
+<td>–user=nginx \ –group=nginx</td>
+<td>设定nginx进程启动的用户和用户组</td>
+</tr>
+</tbody></table>
+<ul>
+<li><code>nginx.conf</code>的配置相关</li>
+</ul>
+<blockquote>
+<p>第一块</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>user</td>
+<td>设置nginx服务的系统使用用户</td>
+</tr>
+<tr>
+<td>worker_processes</td>
+<td>工作进程数，与cpu核数保持一致</td>
+</tr>
+<tr>
+<td>error_log</td>
+<td>nginxd的错误日志</td>
+</tr>
+<tr>
+<td>pid</td>
+<td>nginx服务启动时候的pid</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>第二块</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>模块</th>
+<th>参数</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>events</td>
+<td>worker_connections</td>
+<td>每个进程允许最大连接数</td>
+</tr>
+<tr>
+<td></td>
+<td>use</td>
+<td>工作进程数</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>第三块</p>
+</blockquote>
+<figure class="highlight nginx"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="section">http</span> &#123; </span><br><span class="line">    include /etc/nginx/mime.types; // http的content-type设置 </span><br><span class="line">    <span class="attribute">default_type</span> application/octet-stream; </span><br><span class="line">    <span class="attribute">log_format</span> main <span class="string">&#x27;$remote_addr - $remote_user [$time_local] &quot;$request&quot; &#x27;</span> <span class="string">&#x27;$status $body_bytes_sent &quot;$http_referer&quot; &#x27;</span> <span class="string">&#x27;&quot;$http_user_agent&quot; &quot;$http_x_forwarded_for&quot;&#x27;</span>;   </span><br><span class="line">    <span class="attribute">access_log</span> /var/log/nginx/access.log main; </span><br><span class="line">    <span class="attribute">sendfile</span> <span class="literal">on</span>; <span class="comment">#tcp_nopush on; </span></span><br><span class="line">    <span class="attribute">keepalive_timeout</span> <span class="number">65</span>; <span class="comment">#gzip on; </span></span><br><span class="line">    // 标准的方式是将多个server配置成多个.conf文件放在/etc/nginx/conf.d下include进来 </span><br><span class="line">    <span class="comment">#include /etc/nginx/conf.d/*.conf; </span></span><br><span class="line">    <span class="section">server</span> &#123; </span><br><span class="line">    		<span class="attribute">listen</span> <span class="number">80</span>; </span><br><span class="line">    		<span class="attribute">server_name</span> localhost; </span><br><span class="line">    		<span class="attribute">localtion</span> / &#123; </span><br><span class="line">      		<span class="attribute">root</span> .... ;</span><br><span class="line">          <span class="attribute">index</span> .... ; </span><br><span class="line">        &#125; </span><br><span class="line">        <span class="attribute">error_page</span> .... </span><br><span class="line">        localtion = /50x.tml &#123; </span><br><span class="line">      			..... </span><br><span class="line">    		&#125; </span><br><span class="line">  	&#125; </span><br><span class="line">  	server &#123; .... &#125; </span><br><span class="line">  	server &#123; .... &#125; </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>log_format</code>定义access_log的日志内容格式，可自定义。例如添加<code>user_agent</code>信息：<code>$http_User_Agent</code>.</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          
+          <div class="post-tags">
+              <a href="/tags/nginx/" rel="tag"><i class="fa fa-tag"></i> nginx</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item"></div>
+      <div class="post-nav-item">
+    <a href="/2018/07/17/Nginx%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3-%E5%9F%BA%E7%A1%80-%E4%B8%80/" rel="next" title="Nginx深入了解-基础(一)">
+      Nginx深入了解-基础(一) <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="kirintang"
+      src="https://avatars.githubusercontent.com/u/8286273">
+  <p class="site-author-name" itemprop="name">kirintang</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">28</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/kirintang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;kirintang" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:tangchunlinit@foxmail.com" title="E-Mail → mailto:tangchunlinit@foxmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">kirintang</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

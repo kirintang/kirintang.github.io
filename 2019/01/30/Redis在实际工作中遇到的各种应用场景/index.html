@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Menlo:300,300italic,400,400italic,700,700italic|monospace:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":"mac"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="Redis作为一种内存类型的数据库工具，在实际工作中除了常见的用来做缓存外，还有很多实际的用处；如并发场景下的的事务锁、实现统计功能、sug等。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Redis在实际工作中遇到的各种应用场景">
+<meta property="og:url" content="http://example.com/2019/01/30/Redis%E5%9C%A8%E5%AE%9E%E9%99%85%E5%B7%A5%E4%BD%9C%E4%B8%AD%E9%81%87%E5%88%B0%E7%9A%84%E5%90%84%E7%A7%8D%E5%BA%94%E7%94%A8%E5%9C%BA%E6%99%AF/index.html">
+<meta property="og:site_name" content="KirinTang">
+<meta property="og:description" content="Redis作为一种内存类型的数据库工具，在实际工作中除了常见的用来做缓存外，还有很多实际的用处；如并发场景下的的事务锁、实现统计功能、sug等。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://raw.githubusercontent.com/chunlintang/imgLib/master/20190217123339.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/chunlintang/imgLib/master/20190217131144.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/chunlintang/imgLib/master/20190217134254.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/chunlintang/imgLib/master/20190217140531.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/chunlintang/imgLib/master/20190217141017.png">
+<meta property="article:published_time" content="2019-01-30T05:39:48.000Z">
+<meta property="article:modified_time" content="2021-03-11T01:40:42.388Z">
+<meta property="article:author" content="kirintang">
+<meta property="article:tag" content="redis">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/chunlintang/imgLib/master/20190217123339.png">
+
+<link rel="canonical" href="http://example.com/2019/01/30/Redis%E5%9C%A8%E5%AE%9E%E9%99%85%E5%B7%A5%E4%BD%9C%E4%B8%AD%E9%81%87%E5%88%B0%E7%9A%84%E5%90%84%E7%A7%8D%E5%BA%94%E7%94%A8%E5%9C%BA%E6%99%AF/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Redis在实际工作中遇到的各种应用场景 | KirinTang</title>
+  
+
+
+  <script>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?1845b2e87cd45ab676f07dac5bde9ae3";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">KirinTang</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">Code And Learn</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-commonweal">
+
+    <a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2019/01/30/Redis%E5%9C%A8%E5%AE%9E%E9%99%85%E5%B7%A5%E4%BD%9C%E4%B8%AD%E9%81%87%E5%88%B0%E7%9A%84%E5%90%84%E7%A7%8D%E5%BA%94%E7%94%A8%E5%9C%BA%E6%99%AF/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="https://avatars.githubusercontent.com/u/8286273">
+      <meta itemprop="name" content="kirintang">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="KirinTang">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Redis在实际工作中遇到的各种应用场景
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2019-01-30 13:39:48" itemprop="dateCreated datePublished" datetime="2019-01-30T13:39:48+08:00">2019-01-30</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <blockquote>
+<p>Redis作为一种内存类型的数据库工具，在实际工作中除了常见的用来做缓存外，还有很多实际的用处；如并发场景下的的事务锁、实现统计功能、sug等。</p>
+</blockquote>
+<span id="more"></span>
+
+<p>Redis有很多种数据结构：字符串(string)、散列(hash)、列表(list)、集合(set)、有序集合(zset，使用Skip List跳跃表实现)、位图(bitmap)、HyperLogLog、地图坐标(GEO)；Redis相比于其他的NoSQL数据库在执行速度方面快很多且效率很高，这是因为它是基于内存来存储相关数据的，且它是基于多路复用的时间响应系统。</p>
+<p>Redis支持事务、内存淘汰、持久化(AOF、RDB、RDB+AOF)。</p>
+<p>多机支持：主从复制（单master多slave）、高可用、集群。</p>
+<p>eg: 获取Redis客户端</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> util </span><br><span class="line"><span class="keyword">import</span> <span class="string">&quot;github.com/go-redis/redis&quot;</span> </span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">RedisClient</span><span class="params">()</span> *<span class="title">redis</span>.<span class="title">Client</span></span> &#123; </span><br><span class="line">  client := redis.NewClient(&amp;redis.Options&#123; </span><br><span class="line">    Addr: <span class="string">&quot;127.0.0.1:6379&quot;</span>, </span><br><span class="line">    Password: <span class="string">&quot;&quot;</span>, </span><br><span class="line">    DB: <span class="number">0</span>, </span><br><span class="line">  &#125;) </span><br><span class="line">  <span class="keyword">return</span> client </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h4 id="实际场景应用"><a href="#实际场景应用" class="headerlink" title="实际场景应用"></a>实际场景应用</h4><h5 id="一，锁"><a href="#一，锁" class="headerlink" title="一，锁"></a>一，锁</h5><blockquote>
+<p>锁是⼀一种同步机制， 它可以保证⼀一项资源在任何时候只能被⼀一个进程使⽤用， 如果有其他进程想要 使⽤用相同的资源， 那么它们就必须等待， 直到正在使⽤用资源的进程放弃使⽤用权为⽌止。</p>
+</blockquote>
+<p>锁的两种操作：获取(acquire)和释放(release)。</p>
+<p>实现锁通常用到三种方式来实现：字符串、事务和带NX的SET。</p>
+<ul>
+<li>字符串</li>
+</ul>
+<p>将⼀一个字符串串键⽤用作锁，如果这个键有值，那么说明锁已被获取;反之，如果键没有值，那么说明<br>锁未被获取，程序可以通过为其设置值来获取锁。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> util </span><br><span class="line"><span class="keyword">import</span> <span class="string">&quot;github.com/chunlintang/frequency-limit/util&quot;</span> </span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> LOCK_KEY = <span class="string">&quot;lock_key&quot;</span> </span><br><span class="line"><span class="keyword">const</span> LOCK_VALUE = <span class="string">&quot;lock_value&quot;</span> </span><br><span class="line"><span class="keyword">var</span> client = util.RedisClient() </span><br><span class="line"><span class="comment">// 获取锁，查看所是否存在 </span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">acquire</span><span class="params">()</span> <span class="title">bool</span></span> &#123; </span><br><span class="line">  current_value, _ := client.Get(lock_key).Result() </span><br><span class="line">  <span class="keyword">if</span> current_value == <span class="string">&quot;&quot;</span> &#123; </span><br><span class="line">    <span class="keyword">if</span> _, err := client.Set(lock_key, lock_value, <span class="number">0</span>).Result(); err != <span class="literal">nil</span> &#123; </span><br><span class="line">      <span class="keyword">return</span> <span class="literal">false</span> </span><br><span class="line">    &#125; </span><br><span class="line">    <span class="keyword">return</span> <span class="literal">true</span> </span><br><span class="line">  &#125; </span><br><span class="line">  <span class="keyword">return</span> <span class="literal">false</span> </span><br><span class="line">&#125; </span><br><span class="line"><span class="comment">// 释放锁 </span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">release</span><span class="params">()</span> <span class="title">bool</span></span> &#123; </span><br><span class="line">  <span class="keyword">if</span> _, err := client.Del(lock_key).Result(); err != <span class="literal">nil</span> &#123; </span><br><span class="line">    <span class="keyword">return</span> <span class="literal">false</span> </span><br><span class="line">  &#125; </span><br><span class="line">  <span class="keyword">return</span> <span class="literal">true</span> </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>弊端</p>
+</blockquote>
+<p>因为 GET 和 SET 在两个不不同的请求中执⾏行行，在它们之间可 能有其他请求已经改变了了锁键的值，导致“锁键为空”这⼀一判 断不不再为真，从⽽而引发多个客户端之间的竞争条件。</p>
+<p><img src="https://raw.githubusercontent.com/chunlintang/imgLib/master/20190217123339.png"></p>
+<ul>
+<li>事务</li>
+</ul>
+<p>锁的基本实现⽅方法跟之前⼀一样，但使⽤用 Redis 的事务特性保证操作的安全性。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">acquire</span><span class="params">()</span> <span class="title">bool</span></span> &#123; </span><br><span class="line">  txf := <span class="function"><span class="keyword">func</span><span class="params">(tx *redis.Tx)</span> <span class="title">error</span></span> &#123; </span><br><span class="line">    <span class="comment">// get current value or zero </span></span><br><span class="line">    n, err := tx.Get(lock_key).Int() </span><br><span class="line">    <span class="keyword">if</span> err != <span class="literal">nil</span> &amp;&amp; err != redis.Nil &#123; </span><br><span class="line">      <span class="keyword">return</span> err </span><br><span class="line">    &#125; </span><br><span class="line">    <span class="comment">// actual opperation (local in optimistic lock) </span></span><br><span class="line">    n++ </span><br><span class="line">    <span class="comment">// runs only if the watched keys remain unchanged </span></span><br><span class="line">    _, err = tx.Pipelined(<span class="function"><span class="keyword">func</span><span class="params">(pipe redis.Pipeliner)</span> <span class="title">error</span></span> &#123; </span><br><span class="line">      <span class="comment">// pipe handles the error case </span></span><br><span class="line">      pipe.Set(lock_key, n, <span class="number">0</span>) </span><br><span class="line">      <span class="keyword">return</span> <span class="literal">nil</span> </span><br><span class="line">    &#125;) </span><br><span class="line">    <span class="keyword">return</span> err </span><br><span class="line">  &#125; </span><br><span class="line">  err := client.Watch(txf, lock_key) </span><br><span class="line">  <span class="keyword">if</span> err != redis.TxFailedErr &#123; </span><br><span class="line">    <span class="keyword">return</span> <span class="literal">false</span> </span><br><span class="line">  &#125; </span><br><span class="line">  current_value, _ := client.Get(lock_key).Result() </span><br><span class="line">  <span class="keyword">if</span> current_value == <span class="string">&quot;&quot;</span> &#123; </span><br><span class="line">    pl := client.TxPipeline() </span><br><span class="line">    client.Set(lock_key, lock_value, <span class="number">0</span>) </span><br><span class="line">    repl, _ := pl.Exec() </span><br><span class="line">    <span class="keyword">if</span> repl != <span class="literal">nil</span> &#123; </span><br><span class="line">      <span class="keyword">return</span> <span class="literal">true</span> </span><br><span class="line">    &#125; </span><br><span class="line">  &#125; </span><br><span class="line">  <span class="keyword">return</span> <span class="literal">false</span> </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><img src="https://raw.githubusercontent.com/chunlintang/imgLib/master/20190217131144.png"></p>
+<ul>
+<li>带NX的SET</li>
+</ul>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">acquire</span><span class="params">()</span> <span class="title">bool</span></span>  &#123;</span><br><span class="line">    repl, _ := client.SetNX(lock_key, lock_value, <span class="number">0</span>).Result()</span><br><span class="line">    <span class="keyword">return</span> repl</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h5 id="二，计数器，统计当前在线用户数"><a href="#二，计数器，统计当前在线用户数" class="headerlink" title="二，计数器，统计当前在线用户数"></a>二，计数器，统计当前在线用户数</h5><p>可使用集合、位图和HyperLogLog实现。</p>
+<ul>
+<li>集合</li>
+</ul>
+<p>当⼀一个新的用户上线时，将它的⽤用户名添加到记录在线⽤用户的集合当中。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> online_user = <span class="string">&quot;ONLINE_USER&quot;</span> </span><br><span class="line"><span class="keyword">var</span> client = util.RedisClient() </span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">setOnline</span><span class="params">(user <span class="keyword">string</span>)</span> <span class="title">bool</span></span> &#123; </span><br><span class="line">  <span class="keyword">if</span> _, err := client.SAdd(online_user, user).Result(); err != <span class="literal">nil</span> &#123; </span><br><span class="line">    <span class="keyword">return</span> <span class="literal">false</span> </span><br><span class="line">  &#125; </span><br><span class="line">  <span class="keyword">return</span> <span class="literal">true</span> </span><br><span class="line">&#125; </span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">countOnline</span><span class="params">()</span> <span class="title">int64</span></span> &#123; </span><br><span class="line">  repl, _ := client.SCard(online_user).Result() </span><br><span class="line">  <span class="keyword">return</span> repl </span><br><span class="line">&#125; </span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">existOnline</span><span class="params">(user <span class="keyword">string</span>)</span> <span class="title">bool</span></span> &#123; </span><br><span class="line">  repl, _ := client.SIsMember(online_user, user).Result() </span><br><span class="line">  <span class="keyword">return</span> repl </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>弊端</p>
+</blockquote>
+<p>集合的体积将随着元素的增加⽽而增加，集合包含的元素越多，每个元素的体积越⼤大，集合的体积也<br>就越⼤大。另外，因为使⽤用 Redis 储存信息还有⼀一些额外的消耗(overhead)，所以实际的内存占⽤用数量量 将⽐比这个估算值更更⾼高。</p>
+<ul>
+<li>位图</li>
+</ul>
+<p>为每个⽤用户创建⼀一个相对应的数字 ID ，当⼀一个⽤用户上线时，使⽤用他的 ID 作为索引，将位图指定索 引上的⼆二进制位设置为 1 。</p>
+<p><img src="https://raw.githubusercontent.com/chunlintang/imgLib/master/20190217134254.png"></p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> online_user_bitmap = <span class="string">&quot;ONLINE_USER_BITMAP&quot;</span> </span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">setOnline</span><span class="params">(user_id <span class="keyword">int64</span>)</span> <span class="title">bool</span></span> &#123; </span><br><span class="line">  <span class="keyword">if</span> _, err := client.SetBit(online_user_bitmap, user_id, <span class="number">1</span>).Result(); err != <span class="literal">nil</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">false</span> </span><br><span class="line">  &#125; </span><br><span class="line">  <span class="keyword">return</span> <span class="literal">true</span> </span><br><span class="line">&#125; </span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">countOnline</span><span class="params">()</span> <span class="title">int64</span></span> &#123; </span><br><span class="line">  repl, _ := client.BitCount(online_user_bitmap, &amp;redis.BitCount&#123;<span class="number">0</span>, <span class="number">0</span>&#125;).Result() </span><br><span class="line">  <span class="keyword">return</span> repl </span><br><span class="line">&#125; </span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">existOnline</span><span class="params">(user_id <span class="keyword">int64</span>)</span> <span class="title">bool</span></span> &#123; </span><br><span class="line">  repl, _ := client.GetBit(online_user_bitmap, user_id).Result() </span><br><span class="line">  <span class="keyword">return</span> repl == <span class="number">1</span> </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>虽然位图的体积仍然会随着⽤用户数量量的增多⽽而变⼤大，但因为记录每个⽤用户所需的内存数量量从原来的 平均 10 字节变成了了 1 位，所以实现⽅方法⼆二将节约⼤大量量内存。</p>
+<ul>
+<li>HyperLogLog</li>
+</ul>
+<p>当⼀一个⽤用户上线时，使⽤用统计在线⽤用户数量量的 HyperLogLog 对其进⾏行行计数。</p>
+<p><img src="https://raw.githubusercontent.com/chunlintang/imgLib/master/20190217140531.png"></p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> online_use_hll = <span class="string">&quot;ONLINE_USER_HLL&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">setOnline</span><span class="params">(user <span class="keyword">string</span>)</span></span> &#123;</span><br><span class="line">    client.PFAdd(online_use_hll, user)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">countOnline</span><span class="params">()</span> <span class="title">int64</span></span> &#123;</span><br><span class="line">    repl, _ := client.PFCount(online_use_hll).Result()</span><br><span class="line">    <span class="keyword">return</span> repl</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h5 id="三，自动补全"><a href="#三，自动补全" class="headerlink" title="三，自动补全"></a>三，自动补全</h5><p><img src="https://raw.githubusercontent.com/chunlintang/imgLib/master/20190217141017.png"></p>
+<p>利用权重实现。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> autocomplete </span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> ( </span><br><span class="line">  <span class="string">&quot;fmt&quot;</span> <span class="string">&quot;github.com/chunlintang/frequency-limit/util&quot;</span> </span><br><span class="line">) </span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> autocomplete = <span class="string">&quot;autocomplete::&quot;</span> </span><br><span class="line"></span><br><span class="line"><span class="keyword">var</span> client = util.RedisClient() </span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">Feed</span><span class="params">(prefix, content <span class="keyword">string</span>, weight <span class="keyword">float64</span>)</span></span> &#123; </span><br><span class="line">  <span class="keyword">for</span> i, _ := <span class="keyword">range</span> prefix &#123; </span><br><span class="line">    segment := prefix[:i+<span class="number">1</span>] </span><br><span class="line">    key := autocomplete + segment </span><br><span class="line">    <span class="keyword">if</span> _, err := client.ZIncrBy(key, weight, content).Result(); err != <span class="literal">nil</span> &#123;</span><br><span class="line">      fmt.Println(<span class="string">&quot;ZIncrBy err&quot;</span>) </span><br><span class="line">    &#125; </span><br><span class="line">  &#125; </span><br><span class="line">&#125; </span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">Hint</span><span class="params">(prefix <span class="keyword">string</span>, count <span class="keyword">int64</span>)</span> []<span class="title">string</span></span> &#123; </span><br><span class="line">  key := autocomplete + prefix </span><br><span class="line">  <span class="comment">//result, _ := client.Cmd(&quot;ZREVANGE&quot;, key, 0, count-1).List() </span></span><br><span class="line">  result, _ := client.ZRevRange(key, <span class="number">0</span>, count<span class="number">-1</span>).Result() </span><br><span class="line">  <span class="keyword">return</span> result </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          
+          <div class="post-tags">
+              <a href="/tags/redis/" rel="tag"><i class="fa fa-tag"></i> redis</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2019/01/27/MYSQL%E4%BA%8B%E5%8A%A1%E9%9A%94%E7%A6%BB/" rel="prev" title="MYSQL事务隔离">
+      <i class="fa fa-chevron-left"></i> MYSQL事务隔离
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2019/02/19/Redis%E9%9B%86%E7%BE%A4%E5%BF%AB%E9%80%9F%E6%90%AD%E5%BB%BA/" rel="next" title="Redis集群快速搭建">
+      Redis集群快速搭建 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%AE%9E%E9%99%85%E5%9C%BA%E6%99%AF%E5%BA%94%E7%94%A8"><span class="nav-number">1.</span> <span class="nav-text">实际场景应用</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E4%B8%80%EF%BC%8C%E9%94%81"><span class="nav-number">1.1.</span> <span class="nav-text">一，锁</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E4%BA%8C%EF%BC%8C%E8%AE%A1%E6%95%B0%E5%99%A8%EF%BC%8C%E7%BB%9F%E8%AE%A1%E5%BD%93%E5%89%8D%E5%9C%A8%E7%BA%BF%E7%94%A8%E6%88%B7%E6%95%B0"><span class="nav-number">1.2.</span> <span class="nav-text">二，计数器，统计当前在线用户数</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E4%B8%89%EF%BC%8C%E8%87%AA%E5%8A%A8%E8%A1%A5%E5%85%A8"><span class="nav-number">1.3.</span> <span class="nav-text">三，自动补全</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="kirintang"
+      src="https://avatars.githubusercontent.com/u/8286273">
+  <p class="site-author-name" itemprop="name">kirintang</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">28</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/kirintang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;kirintang" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:tangchunlinit@foxmail.com" title="E-Mail → mailto:tangchunlinit@foxmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">kirintang</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
