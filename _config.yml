@@ -3,11 +3,11 @@
 ## Source: https://github.com/hexojs/hexo/
 
 # Site
-title: KirinTang
+title: trigerCandy
 subtitle: 'Code And Learn'
-description: ''
+description: 'stay young, stay hungry'
 keywords:
-author: kirintang
+author: Candy
 language: zh-CN
 timezone: 'Asia/Shanghai'
 
@@ -103,12 +103,12 @@ theme: next
 ## Docs: https://hexo.io/docs/one-command-deployment
 deploy:
   type: git
-  repository: git@github.com:kirintang/kirintang.github.io.git
+  repository: git@github.com:tigercandy/tigercandy.github.io.git
   branch: master
-  name: kirintang
+  name: tigercandy
   email: tangchunlinit@gmail.com
 backup:
   type: git
   repository:
-    github: git@github.com:kirintang/kirintang.github.io.git,backup
-    code: git@github.com:kirintang/kirintang.github.io.git,backup
+    github: git@github.com:tigercandy/tigercandy.github.io.git,backup
+    code: git@github.com:tigercandy/tigercandy.github.io.git,backup
